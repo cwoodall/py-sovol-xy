@@ -54,7 +54,7 @@ class SovolSO1(object):
         # It would be good to figure out how to make this a little more robust
         time.sleep(startup_timeout)
         startup_text = self.serial.read_all()
-        logger.debug(startup.decode("ascii"))
+        logger.debug(startup_text.decode("ascii"))
         self.write("G90")  # Set to absolute mode
         self.write("G21")  # Set to mm
 

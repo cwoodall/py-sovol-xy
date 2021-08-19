@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "sovol_xy"
-version = "0.1.1"
+version = "0.1.2"
 homepage = "https://github.com/cwoodall/sovol_xy"
 description = "Library for controlling the Sovol-SO1 xy plotter using the Marlin Firmware."
 authors = ["Christopher Woodall <chris@cwoodall.com>"]
