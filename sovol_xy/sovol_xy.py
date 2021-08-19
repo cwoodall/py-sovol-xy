@@ -3,7 +3,7 @@
 import enum
 import logging
 from typing import List, Optional, Tuple
-
+import time
 from serial import Serial
 
 logger = logging.getLogger(__name__)
