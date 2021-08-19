@@ -35,7 +35,7 @@ class SovolSO1(object):
 
     def __init__(
         self,
-        port: str = "/dev/ttyUSB1",
+        port: str = "/dev/ttyUSB0",
         baud: int = 115200,
         max_dimensions: Point = (300.0, 300.0),
         startup_timeout: float = 10.0,
@@ -148,14 +148,16 @@ class SovolSO1(object):
                     f"I{center[0]:0.3f} J{center[1]:0.3f}"
                 )
             else:
-                self.write(f"G{rot.value} " f"I{center[0]:0.3f} J{center[1]:0.3f}")
+                self.write(
+                    f"G{rot.value} " f"I{center[0]:0.3f} J{center[1]:0.3f}")
 
         elif radius:
             self.write(
                 f"G{rot.value} " f"X{point[0]:0.3f} Y{point[1]:0.3f} " f"R{radius:0.3f}"
             )
         else:
-            raise CommandException("Must provide either a center point or a radius")
+            raise CommandException(
+                "Must provide either a center point or a radius")
 
     def autoHome(self):
         self.write("G28", timeout=100.0)
