@@ -48,6 +48,10 @@ toml = {version = "^0.10.2", optional = true}
 pyserial = "^3.5"
 livereload = {version = "^2.6.3", extras = ["test"]}
 bumpversion = {version = "^0.6.0", extras = ["dev"]}
+pycairo = "^1.20.1"
+pygame = "^2.0.1"
+Pillow = "^8.3.1"
+parse = "^1.19.0"
 
 [tool.poetry.extras]
 test = [

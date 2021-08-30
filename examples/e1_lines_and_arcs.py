@@ -7,7 +7,7 @@ import numpy as np
 
 random.seed(123)
 
-with SovolSO1("/dev/ttyUSB1", timeout=0.0) as plotter:
+with SovolSO1("/dev/pts/7", timeout=0.0,startup_timeout=0.0) as plotter:
     origin = np.array((100, 100.0))
     max_circle_radius = 30
     margin = .25
@@ -44,22 +44,22 @@ with SovolSO1("/dev/ttyUSB1", timeout=0.0) as plotter:
     plotter.pause(50)
     plotter.setPen(PenState.DOWN)
 
-    for i in range(10):
-        # Select random center of  the circle
-        center = (
-            random.randrange(-max_circle_radius,max_circle_radius), 
-            random.randrange(-max_circle_radius,max_circle_radius)
-        )
+    # for i in range(10):
+    #     # Select random center of  the circle
+    #     center = (
+    #         random.randrange(-max_circle_radius,max_circle_radius), 
+    #         random.randrange(-max_circle_radius,max_circle_radius)
+    #     )
 
-        # If we are in the left half plane rotate counter clockwise
-        if center[0] < 0:
-            rot = Rotation.COUNTER_CLOCKWISE
-        # Otherwise rotate clockwise
-        else:
-            rot = Rotation.CLOCKWISE
+    #     # If we are in the left half plane rotate counter clockwise
+    #     if center[0] < 0:
+    #         rot = Rotation.COUNTER_CLOCKWISE
+    #     # Otherwise rotate clockwise
+    #     else:
+    #         rot = Rotation.CLOCKWISE
 
-        # Draw the circle
-        plotter.arcTo(center=center, rot=rot)
+    #     # Draw the circle
+    #     plotter.arcTo(center=center, rot=rot)
  
     # Return to home
     plotter.setPen(PenState.HIGH_UP)

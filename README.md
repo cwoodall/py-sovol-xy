@@ -33,6 +33,19 @@ Library for controlling the Sovol-SO1 xy plotter using the Marlin Firmware
 
 * TODO
 
+## Architecture
+
+```mermaid
+graph LR
+    ParseSVG --> ShapesToPathSegments
+    SortAndCombinePathSegments --> WriteToDevice
+```
+
+Devices:
+- Simulation
+- File (produce G-Code)
+- Sovol-XY
+
 ## Credits
 
 This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter) and the [zillionare/cookiecutter-pypackage](https://github.com/zillionare/cookiecutter-pypackage) project template.

@@ -108,7 +108,7 @@ class SovolSO1(object):
 
         logger.debug(cmd)
         # Write the command
-        self.serial.write(cmd.encode("utf-8") + self.end_of_line)
+        self.serial.write(cmd.encode("ascii") + self.end_of_line)
 
         # Wait until we get an ok returned
         start_time = time.time()
