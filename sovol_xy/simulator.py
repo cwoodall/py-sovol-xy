@@ -19,8 +19,38 @@ import select
 from parse import parse
 
 
+def surface_to_pil(surface):
+    return Image.frombuffer(
+        mode='RGBA',
+        size=(int(surface.get_width()), int(surface.get_height())),
+        data=surface.get_data(),
+    )
+
+
+def pil_to_surface(image):
+    return cairo.ImageSurface.create_for_data(
+        bytearray(image.tobytes('raw', 'BGRa')),
+        cairo.FORMAT_ARGB32,
+        int(image.width),
+        int(image.height),
+    )
+
+
+def add_surfaces(a, b):
+    assert a.get_width() == b.get_width() and a.get_height() == b.get_height()
+    result_pil = Image.new(
+        mode='RGBA',
+        size=sz,
+        color=(0.0, 0.0, 0.0, 0.0),
+    )
+    for surface in (a, b):
+        surface_pil = surface_to_pil(surface)
+        result_pil.paste(im=surface_pil, mask=surface_pil)
+    return pil_to_surface(result_pil)
+
+
 class SovolXYSimulator(object):
-    def __init__(self):
+    def __init__(self, width, height):
         self.master, self.slave = pty.openpty()
         self.serial_name = os.ttyname(self.slave)
         self.serial = serial.Serial(self.serial_name, timeout=.001)
@@ -36,7 +66,29 @@ class SovolXYSimulator(object):
         self.command_position = None
         self.line_color = (0.0, 0, 0, 1)
         self.command_position_stack = []
-    def update(self, ctx):
+
+        self.toolhead_surface = cairo.ImageSurface(
+            cairo.FORMAT_ARGB32, width, height)
+        self.toolhead_ctx = cairo.Context(self.toolhead_surface)
+        self.toolhead_ctx.scale(width, height)  # Normalizing the canvas
+        self.toolhead_ctx.arc(0, 0, .01, 0, 360)
+        self.toolhead_ctx.set_line_cap(cairo.LineCap.ROUND)
+        self.toolhead_ctx.set_source_rgba(1.0, 0, 0, 1)
+        self.toolhead_ctx.set_line_width(.005)
+        self.toolhead_ctx.stroke()
+
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        self.ctx = cairo.Context(self.surface)
+        self.ctx.scale(width, height)  # Normalizing the canvas
+
+        # Clear to white background
+        self.ctx.rectangle(0, 0, 1, 1)  # Rectangle(x0, y0, x1, y1)
+        self.ctx.set_source_rgba(1.0, 1.0, 1.0)
+        self.ctx.fill()
+        self.ctx.move_to(*self.position)
+        self.ctx.set_line_cap(cairo.LineCap.ROUND)
+
+    def update(self):
         # To read from the device
         read_buffer = self.serial.read_all()
         if read_buffer:
@@ -59,6 +111,8 @@ class SovolXYSimulator(object):
                     elif line == "G91":
                         # Relative positioning is not supported
                         os.write(self.master, b"error: not supported\n\r")
+                    elif "M18" in line:
+                        os.write(self.master, b"ok\n\r")
                     elif line == "G92":
                         # Set the current position
                         args = line.split(" ")[1:]
@@ -77,11 +131,18 @@ class SovolXYSimulator(object):
                             self.position = np.array([x, y])
                             os.write(self.master, b"ok\n\r")
                         else:
-                            os.write(self.master, b"error: invalid command\n\r")
+                            os.write(
+                                self.master, b"error: invalid command\n\r")
                     elif line == "G21":
                         os.write(self.master, b"ok\n\r")
                     elif line == "G28":
-                        # self.position = (0.0, 0.0)
+                        # Auto Home clears and then brings the pen position back home.
+                        self.position = (0.0, 0.0)
+                        # Rectangle(x0, y0, x1, y1)
+                        self.ctx.rectangle(0, 0, 1, 1)
+                        self.ctx.set_source_rgba(1.0, 1.0, 1.0)
+                        self.ctx.fill()
+                        self.ctx.move_to(*robot.position)
                         os.write(self.master, b"ok\n\r")
                     elif "G1" in line or "G0" in line:
                         # https://marlinfw.org/docs/gcode/G000-G001.html
@@ -103,7 +164,8 @@ class SovolXYSimulator(object):
 
                         # Need to change this to deal with drawing speeds more reliably
                         if x and y:
-                            self.command_position_stack.append(np.array([x, y]))
+                            self.command_position_stack.append(
+                                np.array([x, y]))
                             print(self.command_position_stack)
                         else:
                             os.write(self.master, b"ok\n\r")
@@ -121,11 +183,11 @@ class SovolXYSimulator(object):
                     elif "G3" in line or "G2" in line:
                         # Arcs are not supported
                         os.write(self.master, b"error: not supported\n\r")
-            
+
         # Move the pen
         dt = .01
         # convert mm/min to %/second
-        speed_limit = (self.speed/ 60.0)/self.x_max
+        speed_limit = (self.speed / 60.0)/self.x_max
         # Note I think this only works for x and y being hte same dimensions
         if len(self.command_position_stack) > 0:
             self.command_position = self.command_position_stack[0]
@@ -134,7 +196,8 @@ class SovolXYSimulator(object):
             dp_norm = dp / (dp**2).sum()**0.5
             dp_dt = dp / dt
             speed = np.linalg.norm(dp_dt)
-            print(f"speed: {self.speed}, command: {self.command_position}, pos: {self.position}, dp_dt: {dp_dt}, {speed_limit}")
+            print(
+                f"speed: {self.speed}, command: {self.command_position}, pos: {self.position}, dp_dt: {dp_dt}, {speed_limit}")
             if abs(speed) < speed_limit:
                 self.position = self.command_position
             else:
@@ -142,20 +205,31 @@ class SovolXYSimulator(object):
 
             if self.pen_height > 10.0:
                 print(f"Moving to {self.position}")
-                ctx.move_to(*self.position)
+                self.ctx.move_to(*self.position)
             else:
                 print(f"Line to {self.position}")
-                ctx.line_to(*self.position)
-                ctx.set_source_rgba(*self.line_color)  # Solid color
-                ctx.set_line_width(self.line_width)
-                ctx.stroke()
-                ctx.move_to(*self.position)
+                self.ctx.line_to(*self.position)
+                self.ctx.set_source_rgba(*self.line_color)  # Solid color
+                self.ctx.set_line_width(self.line_width)
+                self.ctx.stroke()
+                self.ctx.move_to(*self.position)
 
             if self.command_position[0] == self.position[0] and \
-                self.command_position[1] == self.position[1]:
+                    self.command_position[1] == self.position[1]:
                 self.command_position_stack.pop(0)
                 os.write(self.master, b"ok\n\r")
 
+        self.toolhead_surface = cairo.ImageSurface(
+            cairo.FORMAT_ARGB32, width, height)
+        self.toolhead_ctx = cairo.Context(self.toolhead_surface)
+        self.toolhead_ctx.scale(width, height)  # Normalizing the canvas
+        self.toolhead_ctx.arc(*robot.position, .01, 0, 360)
+        self.toolhead_ctx.set_line_cap(cairo.LineCap.ROUND)
+        self.toolhead_ctx.set_source_rgba(1.0, 0, 0, 1)
+        self.toolhead_ctx.set_line_width(.005)
+        if self.pen_height < 10:
+            self.toolhead_ctx.fill()
+        self.toolhead_ctx.stroke()
 
 
 def bgra_surf_to_rgba_string(cairo_surface):
@@ -175,46 +249,31 @@ def bgra_surf_to_rgba_string(cairo_surface):
     return img.tobytes('raw', 'RGBA', 0, 1)
 
 
-robot = SovolXYSimulator()
-
 width, height = 1000, 1000
 pygame.init()
 
 pygame.display.set_mode((width, height))
 screen = pygame.display.get_surface()
 pygame.display.set_caption('Simulator')
+robot = SovolXYSimulator(width, height)
 done = False
-
-surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-ctx = cairo.Context(surface)
-ctx.scale(width, width)  # Normalizing the canvas
-
-# Clear to white background
-ctx.rectangle(0, 0, 1, 1)  # Rectangle(x0, y0, x1, y1)
-ctx.set_source_rgba(1.0, 1.0, 1.0)
-ctx.fill()
-ctx.move_to(*robot.position)
-
 while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
+    screen.fill(pygame.color.Color('white'))
+    robot.update()
 
-    ctx.set_line_cap(cairo.LineCap.ROUND)
-    robot.update(ctx)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+    ctx = cairo.Context(surface)
+    ctx.scale(width, height)
+    ctx.identity_matrix()
 
-    # i += .0005
-    # i = i % 1
-
-    # ctx.translate(0, 0)  # Changing the current transformation matrix
-
-    # ctx.move_to(0, 0)
-    # # Arc(cx, cy, radius, start_angle, stop_angle)
-    # ctx.arc(0.2, 0.1, 0.1, -math.pi / 2, 0)
-    # ctx.line_to(0.5, 0.1)  # Line to (x,y)
-    # # Curve(x1, y1, x2, y2, x3, y3)
-    # ctx.curve_to(0.5, 0.2, 0.5, 0.4, 0.2, 0.8)
-    # ctx.close_path()
+    ctx.set_source_surface(robot.surface, 0, 0)
+    ctx.paint()
+    ctx.set_source_surface(robot.toolhead_surface, 0, 0)
+    ctx.identity_matrix()
+    ctx.paint()
 
     buf = bgra_surf_to_rgba_string(surface)
     image = pygame.image.frombuffer(buf, (width, height), "RGBA").convert()
