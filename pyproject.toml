@@ -24,7 +24,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.6.1,<4.0"
+python = ">=3.7,<3.11"
 fire = "0.4.0"
 
 black  = { version = "20.8b1", optional = true}
@@ -52,6 +52,7 @@ pycairo = "^1.20.1"
 pygame = "^2.0.1"
 Pillow = "^8.3.1"
 parse = "^1.19.0"
+numpy = "^1.21.2"
 
 [tool.poetry.extras]
 test = [
