@@ -29,6 +29,13 @@ Library for controlling the Sovol-SO1 xy plotter using the Marlin Firmware
 * Documentation: <https://sovol-xy.readthedocs.io>
 
 
+## Usage
+
+### Requirements
+
+- Requires libcairo. On debian platforms `apt install libcairo2-dev` should install the required dependency. After this you can run poetry install, or pip install.
+
+### Installing
 ## Features
 
 * TODO
