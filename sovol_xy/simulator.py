@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Using Cairo and python https://pypi.org/project/pycairo/
 # https://pycairo.readthedocs.io/en/latest/reference/surfaces.html
 # https://www.geeksforgeeks.org/python-os-readv-method/
