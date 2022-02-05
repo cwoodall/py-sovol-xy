@@ -56,6 +56,8 @@ class SovolXYSimulator(object):
         self.serial_name = os.ttyname(self.slave)
         self.serial = serial.Serial(self.serial_name, timeout=.001)
 
+        self.width = width
+        self.height = height
         print(f"Virtual Serial Port to attach to: {self.serial_name}")
         self.x_max = 300
         self.y_max = 300
@@ -143,7 +145,7 @@ class SovolXYSimulator(object):
                         self.ctx.rectangle(0, 0, 1, 1)
                         self.ctx.set_source_rgba(1.0, 1.0, 1.0)
                         self.ctx.fill()
-                        self.ctx.move_to(*robot.position)
+                        self.ctx.move_to(*self.position)
                         os.write(self.master, b"ok\n\r")
                     elif "G1" in line or "G0" in line:
                         # https://marlinfw.org/docs/gcode/G000-G001.html
@@ -221,10 +223,10 @@ class SovolXYSimulator(object):
                 os.write(self.master, b"ok\n\r")
 
         self.toolhead_surface = cairo.ImageSurface(
-            cairo.FORMAT_ARGB32, width, height)
+            cairo.FORMAT_ARGB32, self.width, self.height)
         self.toolhead_ctx = cairo.Context(self.toolhead_surface)
-        self.toolhead_ctx.scale(width, height)  # Normalizing the canvas
-        self.toolhead_ctx.arc(*robot.position, .01, 0, 360)
+        self.toolhead_ctx.scale(self.width, self.height)  # Normalizing the canvas
+        self.toolhead_ctx.arc(*self.position, .01, 0, 360)
         self.toolhead_ctx.set_line_cap(cairo.LineCap.ROUND)
         self.toolhead_ctx.set_source_rgba(1.0, 0, 0, 1)
         self.toolhead_ctx.set_line_width(.005)
@@ -250,33 +252,37 @@ def bgra_surf_to_rgba_string(cairo_surface):
     return img.tobytes('raw', 'RGBA', 0, 1)
 
 
-width, height = 1000, 1000
-pygame.init()
+def main():
+    width, height = 1000, 1000
+    pygame.init()
 
-pygame.display.set_mode((width, height))
-screen = pygame.display.get_surface()
-pygame.display.set_caption('Simulator')
-robot = SovolXYSimulator(width, height)
-done = False
-while not done:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
-    screen.fill(pygame.color.Color('white'))
-    robot.update()
+    pygame.display.set_mode((width, height))
+    screen = pygame.display.get_surface()
+    pygame.display.set_caption('Simulator')
+    robot = SovolXYSimulator(width, height)
+    done = False
+    while not done:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
+        screen.fill(pygame.color.Color('white'))
+        robot.update()
 
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-    ctx = cairo.Context(surface)
-    ctx.scale(width, height)
-    ctx.identity_matrix()
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        ctx = cairo.Context(surface)
+        ctx.scale(width, height)
+        ctx.identity_matrix()
 
-    ctx.set_source_surface(robot.surface, 0, 0)
-    ctx.paint()
-    ctx.set_source_surface(robot.toolhead_surface, 0, 0)
-    ctx.identity_matrix()
-    ctx.paint()
+        ctx.set_source_surface(robot.surface, 0, 0)
+        ctx.paint()
+        ctx.set_source_surface(robot.toolhead_surface, 0, 0)
+        ctx.identity_matrix()
+        ctx.paint()
 
-    buf = bgra_surf_to_rgba_string(surface)
-    image = pygame.image.frombuffer(buf, (width, height), "RGBA").convert()
-    screen.blit(image, image.get_rect())
-    pygame.display.flip()
+        buf = bgra_surf_to_rgba_string(surface)
+        image = pygame.image.frombuffer(buf, (width, height), "RGBA").convert()
+        screen.blit(image, image.get_rect())
+        pygame.display.flip()
+
+if __name__ == "__main__":
+    main()

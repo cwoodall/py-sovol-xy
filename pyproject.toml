@@ -76,7 +76,8 @@ doc = [
     ]
 
 [tool.poetry.scripts]
-sovol_xy = 'sovol_xy.cli:main'
+sovol_xy_e1 = 'sovol_xy.examples.e1_lines_and_arcs:main'
+sovol_xy_sim = 'sovol_xy.simulator:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

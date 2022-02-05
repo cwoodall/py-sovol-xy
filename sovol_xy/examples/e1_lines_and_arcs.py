@@ -69,6 +69,8 @@ def draw(port, seed=123, startup_timeout=0.0):
         plotter.setTravelSpeed()
         plotter.moveTo((0.0, 0.0))
 
+def main():
+    fire.Fire(draw)
 
 if __name__ == "__main__":
-    fire.Fire(draw)
+    main()
